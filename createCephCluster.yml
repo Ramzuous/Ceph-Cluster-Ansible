@@ -1,0 +1,272 @@
+# Creating VMs
+
+- hosts: proxmox_node
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+    - name: Send ssh public key
+      copy:
+        src: id_rsa.pub
+        dest: /root/id_rsa.pub
+        owner: root
+        group: root
+        mode: '644'
+    - name: Send ssh privat key
+      copy:
+        src: id_rsa
+        dest: /root/id_rsa
+        owner: root
+        group: root
+        mode: '644'
+    - name: Create VMs
+      proxmox_kvm:
+        node: "{{ item.operation_node_short }}"
+        api_user: "{{ item.api_user }}"
+        api_password: "{{ item.api_pass }}"
+        api_host: "{{ item.operation_node_short }}"
+        clone: template
+        target: "{{ item.operation_node_short }}"
+        vmid: 9000
+        newid: "{{ item.vm_id }}"
+        name: "{{ item.vm_name }}"
+        boot: 'order=scsi0;ide2;net0'
+        scsihw: 'virtio-scsi-pci'
+        virtio:
+          virtio0: 'LVM-1,32,format=raw'
+        net:
+          net0: 'virtio,bridge=vmbr0'
+        cores: 2
+        vcpus: 2
+        memory: 2048
+        timeout: 300
+      with_items:
+        - "{{ ceph_admin_vars }}"
+        - "{{ ceph_mon_vars }}"
+        - "{{ ceph_osd_vars }}"
+    - name: Disk Extend
+      shell: qm resize "{{ item.vm_id }}" "{{ item.main_disk_type }}" "{{ item.disk_ext }}"
+      with_items: 
+        - "{{ ceph_admin_vars }}"
+        - "{{ ceph_mon_vars }}"
+        - "{{ ceph_osd_vars }}"
+    - name: Set Cloud init config
+      shell: |
+             qm set "{{ item.vm_id }}" --ipconfig0 "{{ item.network_cloud }}"
+             qm set "{{ item.vm_id }}" --nameserver "{{ item.nameserver_cloud }}"
+             qm set "{{ item.vm_id }}" --searchdomain "{{ item.searchdomain_cloud }}"
+             qm set "{{ item.vm_id }}" --sshkey  "{{ item.ssh_key_cloud }}"
+      with_items: 
+        - "{{ ceph_admin_vars }}"
+        - "{{ ceph_mon_vars }}"
+        - "{{ ceph_osd_vars }}"
+    - name: Add osd disks
+      shell: qm set "{{ item.vm_id }}" --"{{ item.osd_disk_type }}" "{{ item.osd_disk }}"
+      with_items: 
+        - "{{ ceph_osd_vars }}"
+    - name: Start VMs
+      shell: qm start "{{ item.vm_id }}"
+      with_items: 
+        - "{{ ceph_admin_vars }}"
+        - "{{ ceph_mon_vars }}"
+        - "{{ ceph_osd_vars }}"
+    - name: Waiting for full VMs start
+      wait_for:
+        host: "{{ item.ip_cloud }}"
+        port: 22
+        delay: 120
+      with_items: 
+        - "{{ ceph_admin_vars }}"
+        - "{{ ceph_mon_vars }}"
+        - "{{ ceph_osd_vars }}"
+    - name: Migrate to target nodes
+      shell: qm migrate "{{ item.vm_id }}" "{{ item.target_node }}" --online
+      with_items: 
+        - "{{ ceph_admin_vars }}"
+        - "{{ ceph_mon_vars }}"
+        - "{{ ceph_osd_vars }}"
+
+
+# Setting enviorment      
+       
+- hosts: cephcluster
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+  - name: Set hostname
+    shell: sed -i 's/.{{ item.searchdomain_cloud }}//' /etc/hostname
+    with_items: 
+      - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - reboot: 
+  - name: Remove /etc/hosts
+    shell: rm -f /etc/hosts
+  - name: Set localhost
+    shell: echo '127.0.0.1 localhost' >> /etc/hosts  
+  - name: Set hosts
+    shell: echo "{{ item.ip_cloud }}" "{{ item.vm_name }}".intern.marcant.net "{{ item.vm_name }}"  >> /etc/hosts
+    with_items: 
+      - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}" 
+  - name: Set fingerprint
+    shell: |
+           ssh-keyscan 127.0.0.1 >> /root/.ssh/known_hosts
+           ssh-keyscan localhost >> /root/.ssh/known_hosts
+           ssh-keyscan "{{ item.ip_cloud }}" >> /root/.ssh/known_hosts
+    with_items: 
+      - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - name: Set ssh config
+    shell: echo -e 'Host {{ item.vm_name }}\n    Hostname {{ item.ip_cloud }}\n    User root' >> /root/.ssh/config
+    with_items: 
+      - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - name: Send id_rsa
+    copy:
+      src: "{{ item.priv_key_path }}"
+      dest: /root/.ssh/id_rsa
+      owner: root
+      group: root
+      mode: '400'
+    with_items: 
+      - "{{ other_vars }}"
+  - name: Upgrade packages
+    dnf: 
+      name: "*"
+      state: latest
+  - name: Set keyboard
+    shell: localectl set-keymap de
+  - name: Enable ssh password login
+    shell: sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - name: Restart sshd
+    systemd:
+      state: restarted
+      name: sshd
+  - name: Install components
+    dnf:
+      name: 
+        - qemu-guest-agent
+        - python3
+        - python3-pip
+        - chrony
+        - lvm2
+        - crun
+      state: latest
+  - name: Set qemu-guest-agent
+    systemd:
+      name: qemu-guest-agent
+      state: started
+      enabled: yes
+  - name: Install Podman
+    shell: |
+           dnf -y module disable container-tools
+           dnf -y install 'dnf-command(copr)'
+           dnf -y copr enable rhcontainerbot/container-selinux           
+           curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+           dnf -y --refresh install runc
+           dnf -y --refresh install podman  
+  - name: Set time-zone
+    shell: timedatectl set-timezone Europe/Berlin
+  - name: Chrony sets    
+    shell: |
+           systemctl enable --now chronyd
+           rm -f /etc/chrony.conf
+  - name: Install cephadm
+    shell: |
+           curl --silent --remote-name --location https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm
+           chmod +x /root/cephadm
+           ./cephadm add-repo --release octopus
+           ./cephadm install
+           cephadm install ceph-common ceph-osd
+           mkdir -p /etc/ceph
+  - name: Upgrade packages
+    dnf: 
+      name: "*"
+      state: latest 
+
+# Set chronyd server
+
+- hosts: cephadmin
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+  - name: Set chronyd server config
+    shell: echo -e "{{ item.chrony_server_set }}" >> /etc/chrony.conf
+    with_items: 
+      - "{{ other_vars }}"
+  - name: Set chronyd
+    shell: timedatectl set-ntp true
+  - name: Restart chronyd
+    systemd:
+      state: restarted
+      name: chronyd
+
+# Set chronyd clients
+
+- hosts: cephclients
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+  - name: Set chronyd client config
+    shell: echo 'server {{ item.ip_cloud }}' >> /etc/chrony.conf
+    with_items: 
+      - "{{ ceph_admin_vars }}"
+  - name: Set chronyd
+    shell: timedatectl set-ntp true
+  - name: Restart chronyd
+    systemd:
+      state: restarted
+      name: chronyd
+      
+# Set cluster - ultimate        
+
+- hosts: cephadmin
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+  - name: Set bootstrap
+    shell: cephadm bootstrap --mon-ip "{{ item.ip_cloud }}" --initial-dashboard-password 'admin'
+    with_items: 
+      - "{{ ceph_admin_vars }}"
+  - name: Send ceph_key
+    shell: ssh-copy-id -f -i /etc/ceph/ceph.pub root@"{{ item.vm_name }}"
+    with_items: 
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - name: Add hosts to cephadmin
+    shell: ceph orch host add "{{ item.vm_name }}" "{{ item.ip_cloud }}" --labels _admin
+    with_items: 
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - name: Set unmanaged mon
+    shell: ceph orch apply mon --unmanaged
+  - name: Add mons
+    shell: ceph orch daemon add mon "{{ item.vm_name }}":"{{ item.ip_cloud }}"
+    with_items: 
+      - "{{ ceph_mon_vars }}"
+  - name: Add osds
+    shell: ceph orch daemon add osd "{{ item.vm_name }}":/dev/sdb
+    with_items: 
+      - "{{ ceph_osd_vars }}"
+  - name: Set Telemetry
+    shell: ceph telemetry on --license sharing-1-0
+
+# Show message about ceph-admin access
+
+- hosts: proxmox_node
+  gather_facts: false
+  tasks:
+    - shell: |
+             echo "Ceph cluster is ready, to log into it type in browser: https://ip_admin:8443"
+             echo "Default user and pass is: admin"
+      register: result
+    - debug:
+        var: result.stdout_lines
