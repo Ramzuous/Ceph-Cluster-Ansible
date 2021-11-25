@@ -4,7 +4,7 @@
 
 if test -f clear-config.sh;
 then
-	rm clear-config.sh
+        rm clear-config.sh
 fi
 
 echo ""
@@ -85,6 +85,12 @@ cp id_rsa* ~/.ssh
 echo ""
 echo ""
 
+mkdir host_vars
+
+mkdir inventory
+
+mkdir vars_files
+
 echo "Generate group_vars/proxmox.yml"
 
 echo "ansible_user:" $proxmox_user >> group_vars/proxmox.yml
@@ -125,26 +131,26 @@ echo ""
 
 while [ $proxmox_ip_fourth_smaller -le $proxmox_ip_fourth_greater ]
 do
-	if [ $i -gt 9 ]
-	then
+        if [ $i -gt 9 ]
+        then
 
-		node_name="pve"$i
+                node_name="pve"$i
 
-	else
-		node_name="pve0"$i
-	fi
+        else
+                node_name="pve0"$i
+        fi
 
-	proxmox_ip=$proxmox_ip_three"."$proxmox_ip_fourth_smaller
+        proxmox_ip=$proxmox_ip_three"."$proxmox_ip_fourth_smaller
 
-	proxmox_name=$node_name'.'$proxmox_domain_name
+        proxmox_name=$node_name'.'$proxmox_domain_name
 
         echo "ansible_host: "$proxmox_ip >> host_vars/$proxmox_name".yml"
 
 
-	echo "        "$proxmox_name":" >> inventory/ceph-cluster-inventory.yml
+        echo "        "$proxmox_name":" >> inventory/ceph-cluster-inventory.yml
 
-	proxmox_ip_fourth_smaller=$((proxmox_ip_fourth_smaller+1))
-	i=$((i+1))
+        proxmox_ip_fourth_smaller=$((proxmox_ip_fourth_smaller+1))
+        i=$((i+1))
 
 done
 
@@ -210,27 +216,27 @@ i=0
 while [ $mon_ip_fourth_smaller -le $mon_ip_fourth_greater ]
 do
 
-	mon_ip=$ceph_network"."$mon_ip_fourth_smaller
+        mon_ip=$ceph_network"."$mon_ip_fourth_smaller
 
-	mon_name="ceph-mon-"$i
+        mon_name="ceph-mon-"$i
 
-	echo "Setting host_vars/"$mon_name".yml"
+        echo "Setting host_vars/"$mon_name".yml"
 
         echo "ansible_host: "$mon_ip >> host_vars/$mon_name".yml"
 
-	echo "            "$mon_name":" >> inventory/ceph-cluster-inventory.yml
+        echo "            "$mon_name":" >> inventory/ceph-cluster-inventory.yml
 
-	echo "  - { vm_id: 30"$i", vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
+        echo "  - { vm_id: 30"$i", vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
 
-	echo "- hosts:" $target_node_mon"."$proxmox_domain_name >> destroy-vms.yml
-	echo "  gather_facts: false" >> destroy-vms.yml
-	echo "  tasks:" >> destroy-vms.yml
-	echo "    - shell: qm stop 30"$i >> destroy-vms.yml
-	echo "    - shell: qm destroy 30"$i >> destroy-vms.yml
-	echo "" >> destroy-vms.yml
+        echo "- hosts:" $target_node_mon"."$proxmox_domain_name >> destroy-vms.yml
+        echo "  gather_facts: false" >> destroy-vms.yml
+        echo "  tasks:" >> destroy-vms.yml
+        echo "    - shell: qm stop 30"$i >> destroy-vms.yml
+        echo "    - shell: qm destroy 30"$i >> destroy-vms.yml
+        echo "" >> destroy-vms.yml
 
         mon_ip_fourth_smaller=$((mon_ip_fourth_smaller+1))
-	i=$((i+1))
+        i=$((i+1))
 
 done
 
@@ -255,27 +261,27 @@ i=0
 while [ $osd_ip_fourth_smaller -le $osd_ip_fourth_greater ]
 do
 
-	osd_ip=$ceph_network"."$osd_ip_fourth_smaller
+        osd_ip=$ceph_network"."$osd_ip_fourth_smaller
 
-	osd_name="ceph-osd-"$i
+        osd_name="ceph-osd-"$i
 
-	echo "Set static vars_files/"$osd_name".yml"
+        echo "Set static vars_files/"$osd_name".yml"
 
         echo "ansible_host: "$osd_ip >> host_vars/$osd_name".yml"
 
-	echo "            "$osd_name":" >> inventory/ceph-cluster-inventory.yml
+        echo "            "$osd_name":" >> inventory/ceph-cluster-inventory.yml
 
-	echo "  - { vm_id: 20"$i", vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_osd"', osd_disk: '"$osd_disk"', ip_cloud: '"$osd_ip"', main_disk_type: '"$main_disk_type"', osd_disk_type: '"$osd_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
+        echo "  - { vm_id: 20"$i", vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_osd"', osd_disk: '"$osd_disk"', ip_cloud: '"$osd_ip"', main_disk_type: '"$main_disk_type"', osd_disk_type: '"$osd_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
 
-	echo "- hosts:" $target_node_osd"."$proxmox_domain_name >> destroy-vms.yml
-	echo "  gather_facts: false" >> destroy-vms.yml
-	echo "  tasks:" >> destroy-vms.yml
-	echo "    - shell: qm stop 20"$i >> destroy-vms.yml
-	echo "    - shell: qm destroy 20"$i >> destroy-vms.yml
-	echo "" >> destroy-vms.yml
+        echo "- hosts:" $target_node_osd"."$proxmox_domain_name >> destroy-vms.yml
+        echo "  gather_facts: false" >> destroy-vms.yml
+        echo "  tasks:" >> destroy-vms.yml
+        echo "    - shell: qm stop 20"$i >> destroy-vms.yml
+        echo "    - shell: qm destroy 20"$i >> destroy-vms.yml
+        echo "" >> destroy-vms.yml
 
-	osd_ip_fourth_smaller=$((osd_ip_fourth_smaller+1))
-	i=$((i+1))
+        osd_ip_fourth_smaller=$((osd_ip_fourth_smaller+1))
+        i=$((i+1))
 
 done
 
@@ -330,49 +336,66 @@ echo "ansible-playbook -i inventory/ceph-cluster-inventory.yml destroy-vms.yml -
 
 echo "" >> clear-config.sh
 
-echo 'echo "Removing files"' >> clear-config.sh
+echo 'echo "If Ansible script deleted all components, type: yes"' >> clear-config.sh
+
+echo 'echo "Only this answer will be acceptable"' >> clear-config.sh
+
+echo 'read -p "so?": confirm' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo 'rm -f id_rsa*' >> clear-config.sh
+echo "if [ \$confirm == 'yes' ]" >> clear-config.sh
+
+echo "then" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo 'rm -f ~/.ssh/id_rsa*' >> clear-config.sh
+echo '  rm -f id_rsa*' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo 'rm group_vars/proxmox.yml' >> clear-config.sh
+echo '  rm -f ~/.ssh/id_rsa*' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo 'rm host_vars/*' >> clear-config.sh
+echo '  rm group_vars/proxmox.yml' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo 'rm inventory/*' >> clear-config.sh
+echo '  rm -r host_vars' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo 'rm vars_files/*' >> clear-config.sh
+echo '  rm -r inventory' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "rm destroy-vms.yml" >> clear-config.sh
+echo '  rm -r vars_files' >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "sed -i 's/"$operation_node"/proxmox_node/g' createCephCluster.yml" >> clear-config.sh
+echo "  rm destroy-vms.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "sed -i 's/"$ceph_admin_ip"/ip_admin/' createCephCluster.yml" >> clear-config.sh
+echo "  sed -i 's/"$operation_node"/proxmox_node/g' createCephCluster.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "echo 'All cluster and ansible configuration for it, were destroyed'" >> clear-config.sh
+echo "  sed -i 's/"$ceph_admin_ip"/ip_admin/' createCephCluster.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
+
+echo "  echo 'All cluster and ansible configuration for it, were destroyed'" >> clear-config.sh
+
+echo "else" >> clear-config.sh
+
+echo '  echo "You did not confirm that you destroyed cluster"' >> clear-config.sh
+
+echo '  echo "Files will not be deleted"' >> clear-config.sh
+
+echo "fi" >> clear-config.sh
+
 echo "" >> clear-config.sh
 
 chmod +x clear-config.sh
