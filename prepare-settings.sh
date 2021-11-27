@@ -22,42 +22,42 @@ echo ""
 #################################################################################
 
 # Proxmox access
-proxmox_user="" # example: root
-proxmox_pass="" # Plain text
+proxmox_user="root" # example: root
+proxmox_pass="a0a713cee0" # Plain text
 
 # Proxmox network
-proxmox_domain_name="" # example: mydomain.net
-proxmox_ip_three="" # Only three octets (example: 192.168.0)
-proxmox_ip_fourth_greater="" # example: 50
-proxmox_ip_fourth_smaller="" # example: 10
+proxmox_domain_name="intern.marcant.net" # example: mydomain.net
+proxmox_ip_three="192.168.4" # Only three octets (example: 192.168.0)
+proxmox_ip_fourth_greater="211" # example: 50
+proxmox_ip_fourth_smaller="200" # example: 10
 
 # Ceph Features - Common
-ceph_network="" # Only three octets, example: 192.168.0
-netmask="" # example: 24
-gateway="" # example: 192.168.0.1
-nameserver="" # example: 8.8.8.8
-searchdomain="" # example: 1.1.1.1
-main_disk_type="" # example: scsi0
-disk_ext="" # example: 10G
+ceph_network="192.168.4" # Only three octets, example: 192.168.0
+netmask="24" # example: 24
+gateway="192.168.4.1" # example: 192.168.0.1
+nameserver="217.14.160.130" # example: 8.8.8.8
+searchdomain="217.14.164.35" # example: 1.1.1.1
+main_disk_type="scsi0" # example: scsi0
+disk_ext="10G" # example: 10G
 
 # Ceph admin
-target_node_admin="" # example: pve01
-ceph_admin_ip="" # example: 192.168.0.10
+target_node_admin="pve02" # example: pve01
+ceph_admin_ip="192.168.4.215" # example: 192.168.0.10
 
 # Ceph mon - admin is also ceph-mon
-target_node_mon="" # example: pve01
-mon_ip_fourth_greater="" # example: 40
-mon_ip_fourth_smaller="" # example: 38
+target_node_mon="pve04" # example: pve01
+mon_ip_fourth_greater="231" # example: 40
+mon_ip_fourth_smaller="230" # example: 38
 
 # Ceph osd
-target_node_osd="" # example: pve01
-osd_ip_fourth_greater="" # example: 35
-osd_ip_fourth_smaller="" # exmaple 30
-osd_disk_type="" # example: scsi2
-osd_disk="" # example: LVM-2:32
+target_node_osd="pve05" # example: pve01
+osd_ip_fourth_greater="223" # example: 35
+osd_ip_fourth_smaller="220" # exmaple 30
+osd_disk_type="scsi2" # example: scsi2
+osd_disk="LVM-2:32" # example: LVM-2:32
 
 # Node on which user uses API (example: pve01)
-operation_node_short="" # example: pve01
+operation_node_short="pve12" # example: pve01
 operation_node=$operation_node_short"."$proxmox_domain_name
 
 #################################################################################
@@ -162,7 +162,7 @@ echo "        cephadmin:" >> inventory/ceph-cluster-inventory.yml
 echo "          hosts:" >> inventory/ceph-cluster-inventory.yml
 echo "            ceph-admin:" >> inventory/ceph-cluster-inventory.yml
 echo "        cephclients:" >> inventory/ceph-cluster-inventory.yml
-echo "          hosts:" >> inventory/ceph-cluster-inventory.yml
+echo "          children:" >> inventory/ceph-cluster-inventory.yml
 
 echo ""
 echo ""
@@ -213,6 +213,10 @@ echo ""
 
 i=0
 
+echo "            cephmons:" >> inventory/ceph-cluster-inventory.yml
+echo "              hosts:" >> inventory/ceph-cluster-inventory.yml
+
+
 while [ $mon_ip_fourth_smaller -le $mon_ip_fourth_greater ]
 do
 
@@ -224,7 +228,7 @@ do
 
         echo "ansible_host: "$mon_ip >> host_vars/$mon_name".yml"
 
-        echo "            "$mon_name":" >> inventory/ceph-cluster-inventory.yml
+        echo "                "$mon_name":" >> inventory/ceph-cluster-inventory.yml
 
         echo "  - { vm_id: 30"$i", vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
 
@@ -258,6 +262,9 @@ echo ""
 
 i=0
 
+echo "            cephosds:" >> inventory/ceph-cluster-inventory.yml
+echo "              hosts:" >> inventory/ceph-cluster-inventory.yml
+
 while [ $osd_ip_fourth_smaller -le $osd_ip_fourth_greater ]
 do
 
@@ -269,7 +276,7 @@ do
 
         echo "ansible_host: "$osd_ip >> host_vars/$osd_name".yml"
 
-        echo "            "$osd_name":" >> inventory/ceph-cluster-inventory.yml
+        echo "                "$osd_name":" >> inventory/ceph-cluster-inventory.yml
 
         echo "  - { vm_id: 20"$i", vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_osd"', osd_disk: '"$osd_disk"', ip_cloud: '"$osd_ip"', main_disk_type: '"$main_disk_type"', osd_disk_type: '"$osd_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
 

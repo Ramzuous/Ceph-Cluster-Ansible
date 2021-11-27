@@ -204,10 +204,26 @@
     systemd:
       state: restarted
       name: chronyd
+      
+- hosts: cephmons
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+  - name: Set chronyd server config
+    shell: echo -e "{{ item.chrony_server_set }}" >> /etc/chrony.conf
+    with_items: 
+      - "{{ other_vars }}"
+  - name: Set chronyd
+    shell: timedatectl set-ntp true
+  - name: Restart chronyd
+    systemd:
+      state: restarted
+      name: chronyd
 
 # Set chronyd clients
 
-- hosts: cephclients
+- hosts: cephosds
   gather_facts: false
   vars_files:
     vars_files/ceph-vars.yml
@@ -216,6 +232,7 @@
     shell: echo 'server {{ item.ip_cloud }}' >> /etc/chrony.conf
     with_items: 
       - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
   - name: Set chronyd
     shell: timedatectl set-ntp true
   - name: Restart chronyd
