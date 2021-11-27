@@ -9,7 +9,7 @@ To run project you need to prepare
  1. VM template with CentOS-8-Stream Cloud init
  2. User for play ansible
  
-If you did above actions, you can set vairiables in <code>prepare-settings.sh</code> nad run.
+If you did above actions, you can set vairiables in <code>prepare-settings.sh</code>
 
 # How to run
 
