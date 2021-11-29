@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Remove clear-config.sh if it exists
+# Remove clear-config.sh if exists
 
 if test -f clear-config.sh;
 then
@@ -22,44 +22,42 @@ echo ""
 #################################################################################
 
 # Proxmox access
-proxmox_user="" # example: root
-proxmox_pass="" # Plain text
+proxmox_user="root" # example: root
+proxmox_pass="a0a713cee0" # Plain text
 
 # Proxmox network
-proxmox_domain_name="" # example: mydomain.net
-proxmox_ip_three="" # Only three octets (example: 192.168.0)
-proxmox_ip_fourth_greater="" # example: 50
-proxmox_ip_fourth_smaller="" # example: 10
+proxmox_domain_name="intern.marcant.net" # example: mydomain.net
+proxmox_ip_three="192.168.4" # Only three octets (example: 192.168.0)
+proxmox_ip_fourth_greater="211" # example: 50
+proxmox_ip_fourth_smaller="200" # example: 10
 
 # Ceph Features - Common
-ceph_network="" # Only three octets, example: 192.168.0
-netmask="" # example: 24
-gateway="" # example: 192.168.0.1
-nameserver="" # example: 8.8.8.8
-searchdomain="" # example: 1.1.1.1
-main_disk_type="" # example: scsi0
-disk_ext="" # example: 10G
+ceph_network="192.168.4" # Only three octets, example: 192.168.0
+netmask="24" # example: 24
+gateway="192.168.4.1" # example: 192.168.0.1
+nameserver="217.14.160.130" # example: 8.8.8.8
+searchdomain="217.14.164.35" # example: 1.1.1.1
+main_disk_type="scsi0" # example: scsi0
+disk_ext="10G" # example: 10G
 
 # Ceph admin
-target_node_admin="" # example: pve01
-ceph_admin_ip="" # example: 192.168.0.10
+target_node_admin="pve02" # example: pve01
+ceph_admin_ip="192.168.4.215" # example: 192.168.0.10
 
 # Ceph mon - admin is also ceph-mon
-# Range of last IPoctet defines how many nodes you will get
-target_node_mon="" # example: pve01
-mon_ip_fourth_greater="" # example: 40
-mon_ip_fourth_smaller="" # example: 38
+target_node_mon="pve04" # example: pve01
+mon_ip_fourth_greater="231" # example: 40
+mon_ip_fourth_smaller="230" # example: 38
 
 # Ceph osd
-# Range of last IP octet defines how many nodes you will get
-target_node_osd="" # example: pve01
-osd_ip_fourth_greater="" # example: 35
-osd_ip_fourth_smaller="" # exmaple 30
-osd_disk_type="" # example: scsi2
-osd_disk="" # example: LVM-2:32
+target_node_osd="pve05" # example: pve01
+osd_ip_fourth_greater="223" # example: 35
+osd_ip_fourth_smaller="220" # exmaple 30
+osd_disk_type="scsi2" # example: scsi2
+osd_disk="LVM-2:32" # example: LVM-2:32
 
 # Node on which user uses API (example: pve01)
-operation_node_short="" # example: pve01
+operation_node_short="pve12" # example: pve01
 operation_node=$operation_node_short"."$proxmox_domain_name
 
 #################################################################################
@@ -359,49 +357,97 @@ echo "then" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo '  rm -f id_rsa*' >> clear-config.sh
+echo "	if test -f id_rsa;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm id_rsa" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo '  rm -f ~/.ssh/id_rsa*' >> clear-config.sh
+echo "	if test -f id_rsa.pub;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm id_rsa.pub" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo '  rm group_vars/proxmox.yml' >> clear-config.sh
+echo "	if test -f ~/.ssh/id_rsa;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -f ~/.ssh/id_rsa" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo '  rm -r host_vars' >> clear-config.sh
+echo "	if test -f ~/.ssh/id_rsa.pub;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -f ~/.ssh/id_rsa.pub" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo '  rm -r inventory' >> clear-config.sh
+echo "	if test -f group_vars/proxmox.yml;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -f group_vars/proxmox.yml" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo '  rm -r vars_files' >> clear-config.sh
+echo "	if test -f group_vars/proxmox.yml;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -f group_vars/proxmox.yml" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "  rm destroy-vms.yml" >> clear-config.sh
+echo "	if test -d host_vars;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -r host_vars" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "  sed -i 's/"$operation_node"/proxmox_node/g' createCephCluster.yml" >> clear-config.sh
+echo "	if test -d inventory;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -r inventory" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "  sed -i 's/"$ceph_admin_ip"/ip_admin/' createCephCluster.yml" >> clear-config.sh
+echo "	if test -d vars_files;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -r vars_files" >> clear-config.sh
+echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "  echo 'All cluster and ansible configuration for it, were destroyed'" >> clear-config.sh
+echo "	if test -f destroy-vms.yml;" >> clear-config.sh
+echo "	then" >> clear-config.sh
+echo "		rm -f destroy-vms.yml" >> clear-config.sh
+echo "	fi" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$operation_node"/proxmox_node/g' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$ceph_admin_ip"/ip_admin/' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	echo 'All cluster and ansible configuration for it, were destroyed'" >> clear-config.sh
+
+echo "" >> clear-config.sh
 
 echo "else" >> clear-config.sh
 
-echo '  echo "You did not confirm that you destroyed cluster"' >> clear-config.sh
+echo "" >> clear-config.sh
 
-echo '  echo "Files will not be deleted"' >> clear-config.sh
+echo '	echo "You did not confirm that you destroyed cluster"' >> clear-config.sh
+
+echo '	echo "Files will not be deleted"' >> clear-config.sh
+
+echo "" >> clear-config.sh
 
 echo "fi" >> clear-config.sh
 
