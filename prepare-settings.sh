@@ -415,20 +415,6 @@ echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "	if test -f group_vars/proxmox.yml;" >> clear-config.sh
-echo "	then" >> clear-config.sh
-echo "		rm -f group_vars/proxmox.yml" >> clear-config.sh
-echo "	fi" >> clear-config.sh
-
-echo "" >> clear-config.sh
-
-echo "	if test -f group_vars/proxmox.yml;" >> clear-config.sh
-echo "	then" >> clear-config.sh
-echo "		rm -f group_vars/proxmox.yml" >> clear-config.sh
-echo "	fi" >> clear-config.sh
-
-echo "" >> clear-config.sh
-
 echo "	if test -d host_vars;" >> clear-config.sh
 echo "	then" >> clear-config.sh
 echo "		rm -r host_vars" >> clear-config.sh
