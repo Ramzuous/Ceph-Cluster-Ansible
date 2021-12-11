@@ -6,7 +6,7 @@ This project creates Proxmox VMs with ceph cluster.
 
 To run project you need to prepare
 
- 1. VM template with CentOS-8-Stream Cloud init
+ 1. VM template with CentOS-8-Stream Cloud init ( template need to have set ciuser and cipass)
  2. User for play ansible
  
 If you did above actions, you can set vairiables in <code>prepare-settings.sh</code>
