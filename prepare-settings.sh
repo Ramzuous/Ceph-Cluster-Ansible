@@ -22,43 +22,76 @@ echo ""
 #################################################################################
 
 # Proxmox access
-proxmox_user="root" # example: root
-proxmox_pass="a0a713cee0" # Plain text
+proxmox_user="" # example: root
+proxmox_pass="" # Plain text
 
 # Proxmox network
-proxmox_domain_name="intern.marcant.net" # example: mydomain.net
-proxmox_ip_three="192.168.4" # Only three octets (example: 192.168.0)
-proxmox_ip_fourth_greater="211" # example: 50
-proxmox_ip_fourth_smaller="200" # example: 10
+proxmox_domain_name="" # example: mydomain.net
+proxmox_ip_three="" # Only three octets (example: 192.168.0)
+proxmox_ip_fourth_greater="" # example: 50
+proxmox_ip_fourth_smaller="" # example: 10
+
+# Template settings
+template_name="" # Plain text
+template_id=""
+
+# Hardware
+boot_order="" # example: order=scsi0;ide2;net0
+scsi_hw="" # example: virtio-scsi-pci
+virtio_disc="" # example LVM,32,format=raw
+net0_hw="" # example: virtio,bridge=vmbr0
+cores_num=""
+vcpus_num=""
+memory_size="" # example 4096
 
 # Ceph Features - Common
-ceph_network="192.168.4" # Only three octets, example: 192.168.0
-netmask="24" # example: 24
-gateway="192.168.4.1" # example: 192.168.0.1
-nameserver="217.14.160.130" # example: 8.8.8.8
-searchdomain="217.14.164.35" # example: 1.1.1.1
-main_disk_type="scsi0" # example: scsi0
-disk_ext="10G" # example: 10G
+ceph_network="" # Only three octets, example: 192.168.0
+netmask="" # example: 24
+gateway="" # example: 192.168.0.1
+nameserver="" # example: 8.8.8.8
+searchdomain="" # example: 1.1.1.1
+ceph_domain="" # example: mydomain.net
+main_disk_type="" # example: scsi0
+disk_ext="" # example: 10G
+cloud_init_user="" # example: root (need to be the same like in a template)
 
 # Ceph admin
-target_node_admin="pve02" # example: pve01
-ceph_admin_ip="192.168.4.215" # example: 192.168.0.10
+target_node_admin="" # example: pve01
+ceph_admin_ip="" # example: 192.168.0.10
+ceph_admin_hostname="" # example: admin
+ceph_admin_vm_id="" # example: 199
 
 # Ceph mon - admin is also ceph-mon
-target_node_mon="pve04" # example: pve01
-mon_ip_fourth_greater="231" # example: 40
-mon_ip_fourth_smaller="230" # example: 38
+target_node_mon="" # example: pve01
+mon_ip_fourth_greater="" # example: 40
+mon_ip_fourth_smaller="" # example: 38
+ceph_mons_name_begin="" # example: mon
+ceph_mons_vm_id_begin="" # example: 30
 
 # Ceph osd
-target_node_osd="pve05" # example: pve01
-osd_ip_fourth_greater="223" # example: 35
-osd_ip_fourth_smaller="220" # exmaple 30
-osd_disk_type="scsi2" # example: scsi2
-osd_disk="LVM-2:32" # example: LVM-2:32
+target_node_osd="" # example: pve01
+osd_ip_fourth_greater="" # example: 35
+osd_ip_fourth_smaller="" # exmaple 30
+ceph_osds_name_begin="" # example: osd
+ceph_osds_vm_id_begin="" # example: 20
+osd_disk_type="" # example: scsi2
+osd_disk="" # example: LVM-2:32
 
-# Node on which user uses API (example: pve01)
-operation_node_short="pve12" # example: pve01
+# Node on which user uses API
+operation_node_short="" # example: pve01
 operation_node=$operation_node_short"."$proxmox_domain_name
+
+# Cephadm URL
+ceph_url="https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm"
+
+# Time zone (exmaple: Europe/Berlin)
+time_zone=""
+
+# Keyboard layout for VMs (example: de)
+keyboard_layout=""
+
+# Chrony server setup (example: server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org )
+chrony_server_set="server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst"
 
 #################################################################################
 
@@ -85,11 +118,27 @@ cp id_rsa* ~/.ssh
 echo ""
 echo ""
 
+echo "Make necessary dirs"
+
 mkdir host_vars
 
 mkdir inventory
 
 mkdir vars_files
+
+mkdir group_vars
+
+echo ""
+echo ""
+
+echo "Set group_vars/cephcluster.yml"
+
+echo "ansible_user: "$cloud_init_user >> group_vars/cephcluster.yml
+echo "ansible_port: 22" >> group_vars/cephcluster.yml
+echo "ansible_connection: ssh" >> group_vars/cephcluster.yml
+
+echo ""
+echo ""
 
 echo "Generate group_vars/proxmox.yml"
 
@@ -160,7 +209,7 @@ echo "    cephcluster:" >> inventory/ceph-cluster-inventory.yml
 echo "      children:" >> inventory/ceph-cluster-inventory.yml
 echo "        cephadmin:" >> inventory/ceph-cluster-inventory.yml
 echo "          hosts:" >> inventory/ceph-cluster-inventory.yml
-echo "            ceph-admin:" >> inventory/ceph-cluster-inventory.yml
+echo "            "$ceph_admin_hostname":" >> inventory/ceph-cluster-inventory.yml
 echo "        cephclients:" >> inventory/ceph-cluster-inventory.yml
 echo "          children:" >> inventory/ceph-cluster-inventory.yml
 
@@ -180,19 +229,11 @@ echo "Set static vars_files/ceph-vars.yml"
 echo ""
 echo ""
 
-echo "ansible_host: "$ceph_admin_ip >> host_vars/ceph-admin.yml
+echo "ansible_host: "$ceph_admin_ip >> host_vars/$ceph_admin_hostname.yml
 
 echo "ceph_admin_vars:" >> vars_files/ceph-vars.yml
-echo "  - { vm_id: 199, vm_name: 'ceph-admin', network_cloud: 'ip="$ceph_admin_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_admin"', ip_cloud: '"$ceph_admin_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
 
-echo "Set destroy-vms.yml"
-
-echo "- hosts:" $target_node_admin"."$proxmox_domain_name >> destroy-vms.yml
-echo "  gather_facts: false" >> destroy-vms.yml
-echo "  tasks:" >> destroy-vms.yml
-echo "    - shell: qm stop 199" >> destroy-vms.yml
-echo "    - shell: qm destroy 199" >> destroy-vms.yml
-echo "" >> destroy-vms.yml
+echo "  - { vm_id: "$ceph_admin_vm_id", vm_name: '"$ceph_admin_hostname"', network_cloud: 'ip="$ceph_admin_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: 'id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_admin"', ip_cloud: '"$ceph_admin_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", cloud_init_user: "$cloud_init_user", template_name: "$template_name", template_id: "$template_id" }" >> vars_files/ceph-vars.yml
 
 echo ""
 echo ""
@@ -204,7 +245,7 @@ echo "*****************************************************"
 echo ""
 echo ""
 
-echo "Setting host_vars, inventory, vars_files/ceph-vars.yml & destroy-vms.yml"
+echo "Setting host_vars, inventory, vars_files/ceph-vars.yml"
 
 echo "ceph_mon_vars:" >> vars_files/ceph-vars.yml
 
@@ -222,7 +263,7 @@ do
 
         mon_ip=$ceph_network"."$mon_ip_fourth_smaller
 
-        mon_name="ceph-mon-"$i
+        mon_name=$ceph_mons_name_begin"-"$i
 
         echo "Setting host_vars/"$mon_name".yml"
 
@@ -230,14 +271,7 @@ do
 
         echo "                "$mon_name":" >> inventory/ceph-cluster-inventory.yml
 
-        echo "  - { vm_id: 30"$i", vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
-
-        echo "- hosts:" $target_node_mon"."$proxmox_domain_name >> destroy-vms.yml
-        echo "  gather_facts: false" >> destroy-vms.yml
-        echo "  tasks:" >> destroy-vms.yml
-        echo "    - shell: qm stop 30"$i >> destroy-vms.yml
-        echo "    - shell: qm destroy 30"$i >> destroy-vms.yml
-        echo "" >> destroy-vms.yml
+        echo "  - { vm_id: "$ceph_mons_vm_id_begin$i", vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: 'id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', main_disk_type: '"$main_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", cloud_init_user: "$cloud_init_user", template_name: "$template_name", template_id: "$template_id" }" >> vars_files/ceph-vars.yml
 
         mon_ip_fourth_smaller=$((mon_ip_fourth_smaller+1))
         i=$((i+1))
@@ -253,7 +287,7 @@ echo "*****************************************************"
 echo ""
 echo ""
 
-echo "Setting host_vars, inventory, vars_files/ceph-vars.yml & destroy-vms.yml"
+echo "Setting host_vars, inventory & vars_files/ceph-vars.yml"
 
 echo "ceph_osd_vars:" >> vars_files/ceph-vars.yml
 
@@ -270,22 +304,15 @@ do
 
         osd_ip=$ceph_network"."$osd_ip_fourth_smaller
 
-        osd_name="ceph-osd-"$i
+        osd_name=$ceph_osds_name_begin"-"$i
 
-        echo "Set static vars_files/"$osd_name".yml"
+        echo "Setting host_vars/"$osd_name".yml"
 
         echo "ansible_host: "$osd_ip >> host_vars/$osd_name".yml"
 
         echo "                "$osd_name":" >> inventory/ceph-cluster-inventory.yml
 
-        echo "  - { vm_id: 20"$i", vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: '/root/id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_osd"', osd_disk: '"$osd_disk"', ip_cloud: '"$osd_ip"', main_disk_type: '"$main_disk_type"', osd_disk_type: '"$osd_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass" }" >> vars_files/ceph-vars.yml
-
-        echo "- hosts:" $target_node_osd"."$proxmox_domain_name >> destroy-vms.yml
-        echo "  gather_facts: false" >> destroy-vms.yml
-        echo "  tasks:" >> destroy-vms.yml
-        echo "    - shell: qm stop 20"$i >> destroy-vms.yml
-        echo "    - shell: qm destroy 20"$i >> destroy-vms.yml
-        echo "" >> destroy-vms.yml
+        echo "  - { vm_id: "$ceph_osds_vm_id_begin$i", vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', ssh_key_cloud: 'id_rsa.pub', disk_ext: '+"$disk_ext"', target_node: '"$target_node_osd"', osd_disk: '"$osd_disk"', ip_cloud: '"$osd_ip"', main_disk_type: '"$main_disk_type"', osd_disk_type: '"$osd_disk_type"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", cloud_init_user: "$cloud_init_user", template_name: "$template_name", template_id: "$template_id" }" >> vars_files/ceph-vars.yml
 
         osd_ip_fourth_smaller=$((osd_ip_fourth_smaller+1))
         i=$((i+1))
@@ -306,26 +333,29 @@ echo "Setting last static vars"
 
 echo "other_vars:" >> vars_files/ceph-vars.yml
 
-echo "  - { priv_key_path: 'id_rsa', chrony_server_set: 'server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst' }" >> vars_files/ceph-vars.yml
+echo "  - { chrony_server_set: '"$chrony_server_set"', ceph_url: "$ceph_url", time_zone: "$time_zone", keyboard_layout: "$keyboard_layout", proxmox_user: "$proxmox_user", cloud_init_user: "$cloud_init_user" }" >> vars_files/ceph-vars.yml
 
 echo ""
 echo ""
 
 echo "Setting operation node"
 
-sed -i 's/proxmox_node/'$operation_node'/g' createCephCluster.yml
+sed -i 's/operation_node_to_add/'$operation_node'/g' createCephCluster.yml
 
-sed -i 's/ip_admin/'$ceph_admin_ip'/' createCephCluster.yml
+sed -i 's/operation_node_to_add/'$operation_node'/' destroy-vms.yml
+
+sed -i 's/ceph_admin_ip_to_add/'$ceph_admin_ip'/' createCephCluster.yml
+
+sed -i 's/boot_order_to_add/'$boot_order'/' createCephCluster.yml
+
+sed -i 's/scsi_hw_to_add/'$scsi_hw'/' createCephCluster.yml
+
+sed -i 's/virtio_disc_to_add/'$virtio_disc'/' createCephCluster.yml
+
+sed -i 's/net0_hw_to_add/'$net0_hw'/' createCephCluster.yml
 
 echo ""
 echo ""
-
-echo "Setting destroying files"
-
-echo "- hosts:" $operation_node >> destroy-vms.yml
-echo "  gather_facts: false" >> destroy-vms.yml
-echo "  tasks:" >> destroy-vms.yml
-echo "    - shell: rm id_rsa*" >> destroy-vms.yml
 
 echo '#!/bin/bash' >> clear-config.sh
 
@@ -420,18 +450,38 @@ echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "	if test -f destroy-vms.yml;" >> clear-config.sh
+echo "	if test -d group_vars;" >> clear-config.sh
 echo "	then" >> clear-config.sh
-echo "		rm -f destroy-vms.yml" >> clear-config.sh
+echo "		rm -r group_vars" >> clear-config.sh
 echo "	fi" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "	sed -i 's/"$operation_node"/proxmox_node/g' createCephCluster.yml" >> clear-config.sh
+echo "	sed -i 's/"$operation_node"/operation_node_to_add/g' createCephCluster.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
-echo "	sed -i 's/"$ceph_admin_ip"/ip_admin/' createCephCluster.yml" >> clear-config.sh
+echo "  sed -i 's/"$operation_node"/operation_node_to_add/g' destroy-vms.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$ceph_admin_ip"/ceph_admin_ip_to_add/' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$boot_order"/boot_order_to_add/' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$scsi_hw"/scsi_hw_to_add/' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$virtio_disc"/virtio_disc_to_add/' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$net0_hw"/net0_hw_to_add/' createCephCluster.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
 

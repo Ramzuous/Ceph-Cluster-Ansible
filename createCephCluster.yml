@@ -1,6 +1,7 @@
+
 # Creating VMs
 
-- hosts: proxmox_node
+- hosts: operation_node_to_add
   gather_facts: false
   vars_files:
     vars_files/ceph-vars.yml
@@ -8,37 +9,41 @@
     - name: Send ssh public key
       copy:
         src: id_rsa.pub
-        dest: /root/id_rsa.pub
-        owner: root
-        group: root
+        dest: /{{ item.proxmox_user }}/id_rsa.pub
+        owner: "{{ item.proxmox_user }}"
+        group: "{{ item.proxmox_user }}"
         mode: '644'
+      with_items:
+        - "{{ other_vars }}"
     - name: Send ssh privat key
       copy:
         src: id_rsa
-        dest: /root/id_rsa
-        owner: root
-        group: root
+        dest: /{{ item.proxmox_user }}/id_rsa
+        owner: "{{ item.proxmox_user }}"
+        group: "{{ item.proxmox_user }}"
         mode: '644'
+      with_items:
+        - "{{ other_vars }}"
     - name: Create VMs
       proxmox_kvm:
         node: "{{ item.operation_node_short }}"
         api_user: "{{ item.api_user }}"
         api_password: "{{ item.api_pass }}"
         api_host: "{{ item.operation_node_short }}"
-        clone: template
+        clone: "{{ item.template_name }}"
         target: "{{ item.operation_node_short }}"
-        vmid: 9000
+        vmid: "{{ item.template_id }}"
         newid: "{{ item.vm_id }}"
         name: "{{ item.vm_name }}"
-        boot: 'order=scsi0;ide2;net0'
-        scsihw: 'virtio-scsi-pci'
+        boot: 'boot_order_to_add'
+        scsihw: 'scsi_hw_to_add'
         virtio:
-          virtio0: 'LVM-1,32,format=raw'
+          virtio0: 'virtio_disc_to_add'
         net:
-          net0: 'virtio,bridge=vmbr0'
-        cores: 2
-        vcpus: 2
-        memory: 2048
+          net0: 'net0_hw_to_add'
+        cores: "{{ item.cores_num }}"
+        vcpus: "{{ item.vcpus_num }}"
+        memory: "{{ item.memory_size }}"
         timeout: 300
       with_items:
         - "{{ ceph_admin_vars }}"
@@ -95,41 +100,48 @@
     vars_files/ceph-vars.yml
   tasks:
   - name: Set hostname
-    shell: sed -i 's/.{{ item.searchdomain_cloud }}//' /etc/hostname
-    with_items: 
+    replace:
+      path: /etc/hostname
+      regexp: '.{{ item.searchdomain_cloud }}'
+      replace: ''
+    with_items:
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}"
   - name: Set localhost
-    shell: echo '127.0.0.1 localhost' >> /etc/cloud/templates/hosts.redhat.tmpl 
+    lineinfile:
+      path: /etc/cloud/templates/hosts.redhat.tmpl 
+      line: 127.0.0.1 localhost
   - name: Set hosts
-    shell: echo "{{ item.ip_cloud }}" "{{ item.vm_name }}".intern.marcant.net "{{ item.vm_name }}"  >> /etc/cloud/templates/hosts.redhat.tmpl
+    lineinfile:
+      path: /etc/cloud/templates/hosts.redhat.tmpl 
+      line: '{{ item.ip_cloud }} {{ item.vm_name }}.{{ item.ceph_domain }} {{ item.vm_name }}'
     with_items: 
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}" 
   - reboot: 
-  - name: Set fingerprint
+  - name: Set fingerprint    
     shell: |
-           ssh-keyscan 127.0.0.1 >> /root/.ssh/known_hosts
-           ssh-keyscan localhost >> /root/.ssh/known_hosts
-           ssh-keyscan "{{ item.ip_cloud }}" >> /root/.ssh/known_hosts
+           ssh-keyscan 127.0.0.1 >> /{{ item.cloud_init_user }}/.ssh/known_hosts
+           ssh-keyscan localhost >> /{{ item.cloud_init_user }}/.ssh/known_hosts
+           ssh-keyscan "{{ item.ip_cloud }}" >> /{{ item.cloud_init_user }}/.ssh/known_hosts
     with_items: 
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}"
   - name: Set ssh config
-    shell: echo -e 'Host {{ item.vm_name }}\n    Hostname {{ item.ip_cloud }}\n    User root' >> /root/.ssh/config
+    shell: echo -e 'Host {{ item.vm_name }}\n    Hostname {{ item.ip_cloud }}\n    User {{ item.cloud_init_user }}' >> /{{ item.cloud_init_user }}/.ssh/config
     with_items: 
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}"
   - name: Send id_rsa
     copy:
-      src: "{{ item.priv_key_path }}"
-      dest: /root/.ssh/id_rsa
-      owner: root
-      group: root
+      src: id_rsa
+      dest: /{{ item.cloud_init_user }}/.ssh/id_rsa
+      owner: "{{ item.cloud_init_user }}"
+      group: "{{ item.cloud_init_user }}"
       mode: '400'
     with_items: 
       - "{{ other_vars }}"
@@ -138,9 +150,14 @@
       name: "*"
       state: latest
   - name: Set keyboard
-    shell: localectl set-keymap de
+    shell: localectl set-keymap "{{ item.keyboard_layout }}"
+    with_items: 
+      - "{{ other_vars }}"
   - name: Enable ssh password login
-    shell: sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    replace:
+      path: /etc/ssh/sshd_config
+      regexp: 'PasswordAuthentication no'
+      replace: 'PasswordAuthentication yes'
   - name: Restart sshd
     systemd:
       state: restarted
@@ -154,34 +171,61 @@
         - chrony
         - lvm2
         - crun
+        - runc
       state: latest
   - name: Set qemu-guest-agent
     systemd:
       name: qemu-guest-agent
       state: started
       enabled: yes
-  - name: Install Podman
-    shell: |
-           dnf -y module disable container-tools
-           dnf -y install 'dnf-command(copr)'
-           dnf -y copr enable rhcontainerbot/container-selinux           
-           curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-           dnf -y --refresh install runc
-           dnf -y --refresh install podman  
+  - name: dnf -y install podman
+    dnf:
+      name: podman
+      state: present          
   - name: Set time-zone
-    shell: timedatectl set-timezone Europe/Berlin
-  - name: Chrony sets    
-    shell: |
-           systemctl enable --now chronyd
-           rm -f /etc/chrony.conf
-  - name: Install cephadm
-    shell: |
-           curl --silent --remote-name --location https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm
-           chmod +x /root/cephadm
-           ./cephadm add-repo --release octopus
-           ./cephadm install
-           cephadm install ceph-common ceph-osd
-           mkdir -p /etc/ceph
+    timezone:
+      name: "{{ item.time_zone }}"
+    with_items:
+      - "{{ other_vars }}"
+  - name: Chrony enable
+    systemd:
+      name: chronyd
+      enabled: yes
+  - name: Remove /etc/chrony.conf
+    file:
+      path: /etc/chrony.conf
+      state: absent
+  - name: Create /etc/chrony.conf
+    file:
+      path: /etc/chrony.conf
+      state: touch
+  - name: Get cephadm
+    uri: 
+      url: "{{ item.ceph_url }}"
+      dest: /{{ item.cloud_init_user }}
+    with_items: 
+      - "{{ other_vars }}"
+  - name: Change cephadm permisions
+    file:  
+      path: /{{ item.cloud_init_user }}/cephadm
+      mode: '0755'
+    with_items: 
+      - "{{ other_vars }}"
+  - name: execute cephadm add-repo --release octopus
+    shell: ./cephadm add-repo --release octopus
+  - name: execute cephadm install
+    shell: ./cephadm install
+  - name: execute cephadm install ceph-common ceph-osd
+    shell: cephadm install ceph-common ceph-osd
+  - name: mkdir -p /etc/ceph
+    file:
+      path: /etc/ceph
+      state: directory
+      owner: "{{ item.cloud_init_user }}"
+      group: "{{ item.cloud_init_user }}"
+      mode: 0775
+    with_items: 
+      - "{{ other_vars }}"
   - name: Upgrade packages
     dnf: 
       name: "*"
@@ -212,7 +256,7 @@
   tasks:
   - name: Set chronyd server config
     shell: echo -e "{{ item.chrony_server_set }}" >> /etc/chrony.conf
-    with_items: 
+    with_items:
       - "{{ other_vars }}"
   - name: Set chronyd
     shell: timedatectl set-ntp true
@@ -229,7 +273,9 @@
     vars_files/ceph-vars.yml
   tasks:
   - name: Set chronyd client config
-    shell: echo 'server {{ item.ip_cloud }}' >> /etc/chrony.conf
+    lineinfile:
+      path: /etc/chrony.conf
+      line: 'server {{ item.ip_cloud }}'
     with_items: 
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
@@ -252,7 +298,7 @@
     with_items: 
       - "{{ ceph_admin_vars }}"
   - name: Send ceph_key
-    shell: ssh-copy-id -f -i /etc/ceph/ceph.pub root@"{{ item.vm_name }}"
+    shell: ssh-copy-id -f -i /etc/ceph/ceph.pub "{{ item.cloud_init_user }}"@"{{ item.vm_name }}"
     with_items: 
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}"
@@ -276,11 +322,11 @@
 
 # Show message about ceph-admin access
 
-- hosts: proxmox_node
+- hosts: operation_node_to_add
   gather_facts: false
   tasks:
     - shell: |
-             echo "Ceph cluster is ready, to log into it. Type in browser: https://ip_admin:8443"
+             echo "Ceph cluster is ready, to log into it. Type in browser: https://ceph_admin_ip_to_add:8443"
              echo "Default user and pass is: admin"
       register: result
     - debug:
