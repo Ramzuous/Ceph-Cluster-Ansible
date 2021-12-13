@@ -6,24 +6,6 @@
   vars_files:
     vars_files/ceph-vars.yml
   tasks:
-    - name: Send ssh public key
-      copy:
-        src: id_rsa.pub
-        dest: /{{ item.proxmox_user }}/id_rsa.pub
-        owner: "{{ item.proxmox_user }}"
-        group: "{{ item.proxmox_user }}"
-        mode: '644'
-      with_items:
-        - "{{ other_vars }}"
-    - name: Send ssh privat key
-      copy:
-        src: id_rsa
-        dest: /{{ item.proxmox_user }}/id_rsa
-        owner: "{{ item.proxmox_user }}"
-        group: "{{ item.proxmox_user }}"
-        mode: '644'
-      with_items:
-        - "{{ other_vars }}"
     - name: Create VMs
       proxmox_kvm:
         node: "{{ item.operation_node_short }}"
@@ -35,12 +17,6 @@
         vmid: "{{ item.template_id }}"
         newid: "{{ item.vm_id }}"
         name: "{{ item.vm_name }}"
-        boot: 'boot_order_to_add'
-        scsihw: 'scsi_hw_to_add'
-        virtio:
-          virtio0: 'virtio_disc_to_add'
-        net:
-          net0: 'net0_hw_to_add'
         cores: "{{ item.cores_num }}"
         vcpus: "{{ item.vcpus_num }}"
         memory: "{{ item.memory_size }}"
@@ -49,29 +25,58 @@
         - "{{ ceph_admin_vars }}"
         - "{{ ceph_mon_vars }}"
         - "{{ ceph_osd_vars }}"
-    - name: Disk Extend
-      shell: qm resize "{{ item.vm_id }}" "{{ item.main_disk_type }}" "{{ item.disk_ext }}"
-      with_items: 
-        - "{{ ceph_admin_vars }}"
-        - "{{ ceph_mon_vars }}"
-        - "{{ ceph_osd_vars }}"
-    - name: Set Cloud init config
-      shell: |
-             qm set "{{ item.vm_id }}" --ipconfig0 "{{ item.network_cloud }}"
-             qm set "{{ item.vm_id }}" --nameserver "{{ item.nameserver_cloud }}"
-             qm set "{{ item.vm_id }}" --searchdomain "{{ item.searchdomain_cloud }}"
-             qm set "{{ item.vm_id }}" --sshkey  "{{ item.ssh_key_cloud }}"
-      with_items: 
+    - name: Set VMs
+      proxmox_kvm:
+        node: "{{ item.operation_node_short }}"
+        api_user: "{{ item.api_user }}"
+        api_password: "{{ item.api_pass }}"
+        api_host: "{{ item.operation_node_short }}"
+        name: "{{ item.vm_name }}"
+        boot: "{{ item.boot_order }}"
+        scsihw: "{{ item.scsi_hw }}"
+        virtio:
+          virtio0: "{{ item.virtio_disc }}"
+        net:
+          net0: "{{ item.net0_hw }}"
+        cores: "{{ item.cores_num }}"
+        vcpus: "{{ item.vcpus_num }}"
+        memory: "{{ item.memory_size }}"
+        searchdomains: "{{ item.searchdomain_cloud }}"
+        nameservers: "{{ item.nameserver_cloud }}"
+        ciuser: "{{ item.ceph_user }}"
+        cipassword: "{{ item.ceph_pass }}"
+        sshkeys: 'sshkeys_to_add'
+        ipconfig:
+          ipconfig0: "{{ item.network_cloud }}"
+        update: yes
+        timeout: 300
+      with_items:
         - "{{ ceph_admin_vars }}"
         - "{{ ceph_mon_vars }}"
         - "{{ ceph_osd_vars }}"
     - name: Add osd disks
-      shell: qm set "{{ item.vm_id }}" --"{{ item.osd_disk_type }}" "{{ item.osd_disk }}"
-      with_items: 
+      proxmox_kvm:
+        node: "{{ item.operation_node_short }}"
+        api_user: "{{ item.api_user }}"
+        api_password: "{{ item.api_pass }}"
+        api_host: "{{ item.operation_node_short }}"
+        name: "{{ item.vm_name }}"
+        virtio:
+          virtio2: 'LVM-1,64,format=raw'
+      #shell: qm set "{{ item.vm_id }}" --"{{ item.osd_disk_type }}" "{{ item.osd_disk }}"
+      with_items:
         - "{{ ceph_osd_vars }}"
     - name: Start VMs
-      shell: qm start "{{ item.vm_id }}"
-      with_items: 
+      proxmox_kvm:
+        node: "{{ item.operation_node_short }}"
+        api_user: "{{ item.api_user }}"
+        api_password: "{{ item.api_pass }}"
+        api_host: "{{ item.operation_node_short }}"
+        name: "{{ item.vm_name }}"
+        state: started
+        update: yes
+        timeout: 120
+      with_items:
         - "{{ ceph_admin_vars }}"
         - "{{ ceph_mon_vars }}"
         - "{{ ceph_osd_vars }}"
@@ -80,13 +85,7 @@
         host: "{{ item.ip_cloud }}"
         port: 22
         delay: 120
-      with_items: 
-        - "{{ ceph_admin_vars }}"
-        - "{{ ceph_mon_vars }}"
-        - "{{ ceph_osd_vars }}"
-    - name: Migrate to target nodes
-      shell: qm migrate "{{ item.vm_id }}" "{{ item.target_node }}" --online
-      with_items: 
+      with_items:
         - "{{ ceph_admin_vars }}"
         - "{{ ceph_mon_vars }}"
         - "{{ ceph_osd_vars }}"
@@ -123,15 +122,15 @@
   - reboot: 
   - name: Set fingerprint    
     shell: |
-           ssh-keyscan 127.0.0.1 >> /{{ item.cloud_init_user }}/.ssh/known_hosts
-           ssh-keyscan localhost >> /{{ item.cloud_init_user }}/.ssh/known_hosts
-           ssh-keyscan "{{ item.ip_cloud }}" >> /{{ item.cloud_init_user }}/.ssh/known_hosts
+           ssh-keyscan 127.0.0.1 >> /{{ item.ceph_user }}/.ssh/known_hosts
+           ssh-keyscan localhost >> /{{ item.ceph_user }}/.ssh/known_hosts
+           ssh-keyscan "{{ item.ip_cloud }}" >> /{{ item.ceph_user }}/.ssh/known_hosts
     with_items: 
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}"
   - name: Set ssh config
-    shell: echo -e 'Host {{ item.vm_name }}\n    Hostname {{ item.ip_cloud }}\n    User {{ item.cloud_init_user }}' >> /{{ item.cloud_init_user }}/.ssh/config
+    shell: echo -e 'Host {{ item.vm_name }}\n    Hostname {{ item.ip_cloud }}\n    User {{ item.ceph_user }}' >> /{{ item.ceph_user }}/.ssh/config
     with_items: 
       - "{{ ceph_admin_vars }}"
       - "{{ ceph_mon_vars }}"
@@ -139,12 +138,12 @@
   - name: Send id_rsa
     copy:
       src: id_rsa
-      dest: /{{ item.cloud_init_user }}/.ssh/id_rsa
-      owner: "{{ item.cloud_init_user }}"
-      group: "{{ item.cloud_init_user }}"
+      dest: /{{ item.ceph_user }}/.ssh/id_rsa
+      owner: "{{ item.ceph_user }}"
+      group: "{{ item.ceph_user }}"
       mode: '400'
     with_items: 
-      - "{{ other_vars }}"
+      - "{{ ceph_admin_vars }}"
   - name: Upgrade packages
     dnf: 
       name: "*"
@@ -202,15 +201,15 @@
   - name: Get cephadm
     uri: 
       url: "{{ item.ceph_url }}"
-      dest: /{{ item.cloud_init_user }}
+      dest: /{{ item.ceph_user }}
     with_items: 
-      - "{{ other_vars }}"
+      - "{{ ceph_admin_vars }}"
   - name: Change cephadm permisions
     file:  
-      path: /{{ item.cloud_init_user }}/cephadm
+      path: /{{ item.ceph_user }}/cephadm
       mode: '0755'
     with_items: 
-      - "{{ other_vars }}"
+      - "{{ ceph_admin_vars }}"
   - name: execute cephadm add-repo --release octopus
     shell: ./cephadm add-repo --release octopus
   - name: execute cephadm install
@@ -221,11 +220,11 @@
     file:
       path: /etc/ceph
       state: directory
-      owner: "{{ item.cloud_init_user }}"
-      group: "{{ item.cloud_init_user }}"
+      owner: "{{ item.ceph_user }}"
+      group: "{{ item.ceph_user }}"
       mode: 0775
     with_items: 
-      - "{{ other_vars }}"
+      - "{{ ceph_admin_vars }}"
   - name: Upgrade packages
     dnf: 
       name: "*"
@@ -298,7 +297,7 @@
     with_items: 
       - "{{ ceph_admin_vars }}"
   - name: Send ceph_key
-    shell: ssh-copy-id -f -i /etc/ceph/ceph.pub "{{ item.cloud_init_user }}"@"{{ item.vm_name }}"
+    shell: ssh-copy-id -f -i /etc/ceph/ceph.pub "{{ item.ceph_user }}"@"{{ item.vm_name }}"
     with_items: 
       - "{{ ceph_mon_vars }}"
       - "{{ ceph_osd_vars }}"

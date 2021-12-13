@@ -1,0 +1,39 @@
+- hosts: operation_node_to_add
+  gather_facts: false
+  vars_files:
+    vars_files/ceph-vars.yml
+  tasks:
+  - name: Stop VMs
+    proxmox_kvm:
+      api_user: "{{ item.api_user }}"
+      api_password: "{{ item.api_pass }}"
+      api_host: "{{ item.operation_node_short }}"
+      name: "{{ item.vm_name }}"
+      node: "{{ item.target_node }}"
+      state: stopped
+      force: yes
+    with_items:
+      - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - name: Destroy VMs
+    proxmox_kvm:
+      api_user: "{{ item.api_user }}"
+      api_password: "{{ item.api_pass }}"
+      api_host: "{{ item.operation_node_short }}"
+      name: "{{ item.vm_name }}"
+      node: "{{ item.target_node }}"
+      state: absent
+      timeout: 600
+    with_items:
+      - "{{ ceph_admin_vars }}"
+      - "{{ ceph_mon_vars }}"
+      - "{{ ceph_osd_vars }}"
+  - name: Remove id_rsa
+    file:
+      path: id_rsa
+      state: absent
+  - name: Remove id_rsa.pub
+    file:
+      path: id_rsa.pub
+      state: absent
