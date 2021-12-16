@@ -22,62 +22,61 @@ echo ""
 #################################################################################
 
 # Proxmox access
-proxmox_user="root" # example: root
-proxmox_pass="a0a713cee0" # Plain text
+proxmox_user="" # example: root
+proxmox_pass="" # Plain text
 
 # Proxmox network
-proxmox_domain_name="intern.marcant.net" # example: mydomain.net
-proxmox_ip_three="192.168.4" # Only three octets (example: 192.168.0)
-proxmox_ip_fourth_greater="211" # example: 50
-proxmox_ip_fourth_smaller="200" # example: 10
+proxmox_domain_name="" # example: mydomain.net
+proxmox_ip_three="" # Only three octets (example: 192.168.0)
+proxmox_ip_fourth_greater="" # example: 50
+proxmox_ip_fourth_smaller="" # example: 10
 
 # Template settings
-template_mon_name="template-mon-c8" # Plain text
-template_mon_id="9000"
+template_mon_name="" # Plain text
+template_mon_id=""
 
-template_osd_name="template-osd-c8" # Plain text
-template_osd_id="9001"
+template_osd_name="" # Plain text
+template_osd_id=""
 
 # Hardware
-boot_order="order=scsi0;ide2;net0" # example: order=scsi0;ide2;net0
-scsi_hw="virtio-scsi-pci" # example: virtio-scsi-pci
-virtio_disc="LVM-1,32,format=raw" # example
-net0_hw="virtio,bridge=vmbr0" # example: virtio,bridge=vmbr0
-cores_num="2"
-vcpus_num="2"
-memory_size="2048" # example 4096
+boot_order="" # example: order=scsi0;ide2;net0
+scsi_hw="" # example: virtio-scsi-pci
+net0_hw="" # example: virtio,bridge=vmbr0
+cores_num=""
+vcpus_num=""
+memory_size="" # example 4096
 
 # Ceph Features - Common
-ceph_user="root" # exmaple: root
-ceph_pass="test" # Plain text
-ceph_network="192.168.4" # Only three octets, example: 192.168.0
-netmask="24" # example: 24
-gateway="192.168.4.1" # example: 192.168.0.1
-nameserver="217.14.160.130" # example: 8.8.8.8
-searchdomain="217.14.164.35" # example: 1.1.1.1
-ceph_domain="intern.marcant.net" # example: mydomain.net
-time_zone="Europe/Berlin" # Time zone (exmaple: Europe/Berlin)
-keyboard_layout="de" # Keyboard layout for VMs (example: de)
+ceph_user="" # exmaple: root
+ceph_pass="" # Plain text
+ceph_network="" # Only three octets, example: 192.168.0
+netmask="" # example: 24
+gateway="" # example: 192.168.0.1
+nameserver="" # example: 8.8.8.8
+searchdomain="" # example: 1.1.1.1
+ceph_domain="" # example: mydomain.net
+time_zone="" # Time zone (exmaple: Europe/Berlin)
+keyboard_layout="" # Keyboard layout for VMs (example: de)
 
 # Ceph admin
-target_node_admin="pve02" # example: pve01
-ceph_admin_ip="192.168.4.215" # example: 192.168.0.10
-ceph_admin_hostname="ceph-admin" # example: admin
-ceph_admin_vm_id="199" # example: 199
+target_node_admin="" # example: pve01
+ceph_admin_ip="" # example: 192.168.0.10
+ceph_admin_hostname="" # example: admin
+ceph_admin_vm_id="" # example: 199
 
 # Ceph mon - admin is also ceph-mon
-target_node_mon="pve04" # example: pve01
-mon_ip_fourth_greater="231" # example: 40
-mon_ip_fourth_smaller="230" # example: 38
-ceph_mons_name_begin="ceph-mon" # example: mon
-ceph_mons_vm_id_begin="30" # example: 30
+target_node_mon="" # example: pve01
+mon_ip_fourth_greater="" # example: 40
+mon_ip_fourth_smaller="" # example: 38
+ceph_mons_name_begin="" # example: mon
+ceph_mons_vm_id_begin="" # example: 30
 
 # Ceph osd
-target_node_osd="pve05" # example: pve01
-osd_ip_fourth_greater="223" # example: 35
-osd_ip_fourth_smaller="220" # exmaple 30
-ceph_osds_name_begin="ceph-osd" # example: osd
-ceph_osds_vm_id_begin="20" # example: 20
+target_node_osd="" # example: pve01
+osd_ip_fourth_greater="" # example: 35
+osd_ip_fourth_smaller="" # exmaple 30
+ceph_osds_name_begin="" # example: osd
+ceph_osds_vm_id_begin="" # example: 20
 
 # Cephadm URL
 ceph_url="https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm"
@@ -86,7 +85,7 @@ ceph_url="https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm"
 chrony_server_set="server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst"
 
 # Node on which user uses API
-operation_node_short="pve12" # example: pve01
+operation_node_short="" # example: pve01
 
 # Not to set
 operation_node=$operation_node_short"."$proxmox_domain_name
