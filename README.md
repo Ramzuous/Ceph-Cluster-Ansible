@@ -22,14 +22,13 @@ To do it, run:
 
 To start building <code>Ceph-Cluster</code> play:
 
+<code>
+ansible-playbook -i inventory/ceph-cluster-inventory.yml createCephCluster.yml --ask-vault-pass
+</code>
 
-  <code>
-  ansible-playbook -i inventory/ceph-cluster-inventory.yml createCephCluster.yml --ask-vault-pass
-  </code>
 
-
-  If you want to destroy created cluster, run:
+If you want to destroy created cluster, run:
   
-  <code>
-  ./clear-config.sh
-  </code>
+<code>
+./clear-config.sh
+</code>
