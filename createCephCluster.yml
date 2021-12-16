@@ -4,7 +4,10 @@
 - hosts: operation_node_to_add
   gather_facts: false
   vars_files:
-    vars_files/ceph-vars.yml
+    - vars_files/ceph-vars.yml
+    - vars_files/ceph-mon-vars.yml
+    - vars_files/ceph-osd-vars.yml
+    - vars_files/ceph-admin-vars.yml
   tasks:
     - name: Create VMs
       proxmox_kvm:
@@ -13,29 +16,24 @@
         api_password: "{{ item.api_pass }}"
         api_host: "{{ item.operation_node_short }}"
         clone: "{{ item.template_name }}"
-        target: "{{ item.operation_node_short }}"
+        target: "{{ item.target_node }}"
         vmid: "{{ item.template_id }}"
         newid: "{{ item.vm_id }}"
         name: "{{ item.vm_name }}"
-        cores: "{{ item.cores_num }}"
-        vcpus: "{{ item.vcpus_num }}"
-        memory: "{{ item.memory_size }}"
-        timeout: 300
+        timeout: 1200
       with_items:
         - "{{ ceph_admin_vars }}"
         - "{{ ceph_mon_vars }}"
         - "{{ ceph_osd_vars }}"
     - name: Set VMs
       proxmox_kvm:
-        node: "{{ item.operation_node_short }}"
+        node: "{{ item.target_node }}"
         api_user: "{{ item.api_user }}"
         api_password: "{{ item.api_pass }}"
         api_host: "{{ item.operation_node_short }}"
         name: "{{ item.vm_name }}"
-        boot: "{{ item.boot_order }}"
+        boot: 'boot_order_to_add'
         scsihw: "{{ item.scsi_hw }}"
-        virtio:
-          virtio0: "{{ item.virtio_disc }}"
         net:
           net0: "{{ item.net0_hw }}"
         cores: "{{ item.cores_num }}"
@@ -45,7 +43,7 @@
         nameservers: "{{ item.nameserver_cloud }}"
         ciuser: "{{ item.ceph_user }}"
         cipassword: "{{ item.ceph_pass }}"
-        sshkeys: 'sshkeys_to_add'
+        sshkeys: "{{ item.idrsapub }}"
         ipconfig:
           ipconfig0: "{{ item.network_cloud }}"
         update: yes
@@ -54,21 +52,9 @@
         - "{{ ceph_admin_vars }}"
         - "{{ ceph_mon_vars }}"
         - "{{ ceph_osd_vars }}"
-    - name: Add osd disks
-      proxmox_kvm:
-        node: "{{ item.operation_node_short }}"
-        api_user: "{{ item.api_user }}"
-        api_password: "{{ item.api_pass }}"
-        api_host: "{{ item.operation_node_short }}"
-        name: "{{ item.vm_name }}"
-        virtio:
-          virtio2: 'LVM-1,64,format=raw'
-      #shell: qm set "{{ item.vm_id }}" --"{{ item.osd_disk_type }}" "{{ item.osd_disk }}"
-      with_items:
-        - "{{ ceph_osd_vars }}"
     - name: Start VMs
       proxmox_kvm:
-        node: "{{ item.operation_node_short }}"
+        node: "{{ item.target_node }}"
         api_user: "{{ item.api_user }}"
         api_password: "{{ item.api_pass }}"
         api_host: "{{ item.operation_node_short }}"
@@ -96,7 +82,10 @@
 - hosts: cephcluster
   gather_facts: false
   vars_files:
-    vars_files/ceph-vars.yml
+    - vars_files/ceph-vars.yml
+    - vars_files/ceph-mon-vars.yml
+    - vars_files/ceph-osd-vars.yml
+    - vars_files/ceph-admin-vars.yml
   tasks:
   - name: Set hostname
     replace:
@@ -143,7 +132,7 @@
       group: "{{ item.ceph_user }}"
       mode: '400'
     with_items: 
-      - "{{ ceph_admin_vars }}"
+      - "{{ other_vars }}"
   - name: Upgrade packages
     dnf: 
       name: "*"
@@ -203,13 +192,13 @@
       url: "{{ item.ceph_url }}"
       dest: /{{ item.ceph_user }}
     with_items: 
-      - "{{ ceph_admin_vars }}"
+      - "{{ other_vars }}"
   - name: Change cephadm permisions
     file:  
       path: /{{ item.ceph_user }}/cephadm
       mode: '0755'
     with_items: 
-      - "{{ ceph_admin_vars }}"
+      - "{{ other_vars }}"
   - name: execute cephadm add-repo --release octopus
     shell: ./cephadm add-repo --release octopus
   - name: execute cephadm install
@@ -224,7 +213,7 @@
       group: "{{ item.ceph_user }}"
       mode: 0775
     with_items: 
-      - "{{ ceph_admin_vars }}"
+      - "{{ other_vars }}"
   - name: Upgrade packages
     dnf: 
       name: "*"
@@ -269,7 +258,10 @@
 - hosts: cephosds
   gather_facts: false
   vars_files:
-    vars_files/ceph-vars.yml
+    - vars_files/ceph-vars.yml
+    - vars_files/ceph-mon-vars.yml
+    - vars_files/ceph-osd-vars.yml
+    - vars_files/ceph-admin-vars.yml
   tasks:
   - name: Set chronyd client config
     lineinfile:
@@ -290,7 +282,10 @@
 - hosts: cephadmin
   gather_facts: false
   vars_files:
-    vars_files/ceph-vars.yml
+    - vars_files/ceph-vars.yml
+    - vars_files/ceph-mon-vars.yml
+    - vars_files/ceph-osd-vars.yml
+    - vars_files/ceph-admin-vars.yml
   tasks:
   - name: Set bootstrap
     shell: cephadm bootstrap --mon-ip "{{ item.ip_cloud }}" --initial-dashboard-password 'admin'
