@@ -14,6 +14,7 @@ Cluster create:
 
 2. Run: 
 	<code>chmod +x prepare-settings.sh
+	
 	./prepare-settings.sh</code>
 
 3. Run: 
