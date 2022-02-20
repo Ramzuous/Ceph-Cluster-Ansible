@@ -12,29 +12,29 @@ Cluster create:
 
 1. Set variables in prepare-settings.sh - it generates: host_vars, inventory, group_vars, vars_files and set everything to use cluster
 
-2. run: 
+2. Run: 
 	<code>chmod +x prepare-settings.sh
 	./prepare-settings.sh</code>
 
-3. run: 
+3. Run: 
    <code>ansible-playbook -i inventory/ceph-cluster-inventory.yml createCephCluster.yml --ask-vault-pass</code>
 
 # Cluster update:
 
 1. Set variables in update-prepare-settings.sh
 	
-2. run:
+2. Run:
 	<code>chmod +x update-prepare-settings.sh
 	./update-prepare-settings.sh</code>
 
-3. run: 
+3. Run: 
    <code>ansible-playbook -i inventory/ceph-cluster-inventory.yml updateCephCluster.yml --ask-vault-pass</code>
 
 When there is a problem with update script, just run it again.
 
 # Destroy cluster:
 
-Dis comand  will destroy whole cluster's nodes, also created by update
+This comand  will destroy whole cluster's nodes, also created by update
 
 <code>./clear-config.sh</code>
 
@@ -69,33 +69,33 @@ Manual preparing settings to create cluster:
    
      example:
    
-     cat group_vars/proxmox.yml
+     <code>cat group_vars/proxmox.yml
      ansible_user: root
      ansible_password: <vault value>
      ansible_port: 22
-     ansible_connection: ssh
+	     ansible_connection: ssh</code>
    
    group_vars/cephcluster.yml
      
      example:
 	
-     cat group_vars/cephcluster.yml
+    <code> cat group_vars/cephcluster.yml
 	 ansible_user: root
 	 ansible_port: 22
-	 ansible_connection: ssh
+	 ansible_connection: ssh</code>
    
 5. Create host_vars for every ceph host in cluster and every node in proxmox cluster:
 
 	example:
 	
-    cat host_vars/pve01.example.domain.net.yml
-	ansible_host: 192.168.0.200
+    <code>cat host_vars/pve01.example.domain.net.yml
+	 ansible_host: 192.168.0.200</code>
 
 6. Create inventory for all hosts
 
 	example:
 	
-    cat inventory/ceph-cluster-inventory.yml
+    <code>cat inventory/ceph-cluster-inventory.yml
     all:
       children:
         proxmox:
@@ -125,7 +125,7 @@ Manual preparing settings to create cluster:
                     osd-0:
                     osd-1:
                     osd-2:
-                    osd-3:
+                    osd-3:</code>
 
 7. In vars_files create files:
    * ceph-admin-vars.yml (first line: ceph_admin_vars:)
@@ -161,14 +161,14 @@ Manual preparing settings to create cluster:
 
    examples:
 
-   cat vars_files/ceph-admin-vars.yml
+   <code>cat vars_files/ceph-admin-vars.yml
    ceph_admin_vars:
      - { vm_id: 700, ceph_user: root, ceph_pass: 'test', vm_name: 'admin', network_cloud: 'ip=192.168.0.15/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve02', ip_cloud: '192.168.0.15', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-mon, template_id: 9002, idrsapub: '<rsa_public_key>' }
       
    cat vars_files/ceph-mon-vars.yml
    ceph_mon_vars:
      - { vm_id: 806, ceph_user: root, ceph_pass: 'test', vm_name: 'mon-6', network_cloud: 'ip=192.168.0.36/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve04', ip_cloud: '192.168.0.36', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-mon, template_id: 9002, idrsapub: '<rsa_public_key>' }
-     - { vm_id: 807, ceph_user: root, ceph_pass: 'test', vm_name: 'mon-7', network_cloud: 'ip=192.168.0.37/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve04', ip_cloud: '192.168.0.37', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-mon, template_id: 9002, idrsapub: '<rsa_public_key>' }
+     - { vm_id: 807, ceph_user: root, ceph_pass: 'test', vm_name: 'mon-7', network_cloud: 'ip=192.168.0.37/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve04', ip_cloud: '192.168.0.37', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-mon, template_id: 9002, idrsapub: '<rsa_public_key>' }</code>
 
 8. In vars_files create ceph-vars.yml with two headers (vars and other_vars)
    
@@ -184,11 +184,11 @@ Manual preparing settings to create cluster:
    
    example:
    
-   cat vars_files/ceph-vars.yml
+  <code> cat vars_files/ceph-vars.yml
    vars:
      ansible_python_interpreter: '/usr/bin/python3
    other_vars:
-     - { chrony_server_set: 'server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst', ceph_url: <url_to_cephadm>, time_zone: Europe/Berlin, keyboard_layout: de, proxmox_user: root, ceph_user: root }
+     - { chrony_server_set: 'server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst', ceph_url: <url_to_cephadm>, time_zone: Europe/Berlin, keyboard_layout: de, proxmox_user: root, ceph_user: root }</code>
 
 9. Change two variables in createCephCluster.yml and one in destroyVMS.yml
      - operation_node_to_add - is placed in both files, needs to be the same (example: pve01.example.domain.net)
@@ -215,10 +215,10 @@ Manual method to prepare ceph cluster update settings:
    
 	 examples:
 	 
-	 ceph_new_mon_vars:
+	 <code>ceph_new_mon_vars:
 	   - { vm_id: 806, ceph_user: root, ceph_pass: 'test', vm_name: 'mon-6', network_cloud: 'ip=192.168.0.36/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve04', ip_cloud: '192.168.0.36', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-mon, template_id: 9002, idrsapub: '<rsa_public_key>' }
 	 ceph_new_osd_vars:
-	   - { vm_id: 607, ceph_user: root, ceph_pass: 'test', vm_name: 'osd-7', network_cloud: 'ip=192.168.0.27/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve05', ip_cloud: '192.168.0.27', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-osd, template_id: 9003, idrsapub: '<rsa_public_key>' }
+	   - { vm_id: 607, ceph_user: root, ceph_pass: 'test', vm_name: 'osd-7', network_cloud: 'ip=192.168.0.27/24,gw=192.168.0.1', nameserver_cloud: '8.8.8.8', searchdomain_cloud: '1.1.1.1', scsi_hw: 'virtio-scsi-pci', net0_hw: 'virtio,bridge=vmbr0', target_node: 'pve05', ip_cloud: '192.168.0.27', operation_node_short: pve01, api_user: root@pam, api_pass: <proxmox api user password>, memory_size: 2048, cores_num: 2, vcpus_num: 2, ceph_domain: example.domain.net, template_name: template-osd, template_id: 9003, idrsapub: '<rsa_public_key>' }</code>
 	
 	If you want to do next update of your cluster, you need to remove 'vars_files/ceph-new-hosts-vars.yml' and repeat points 1-4 with new settings. 
 	Don't remove added to update group of items from vars_files/ceph-osd-vars.yml and vars_files/ceph-mon-vars.yml. They will be needed when you want to remove VMs.
