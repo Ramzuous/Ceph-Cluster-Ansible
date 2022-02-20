@@ -38,12 +38,14 @@ prepare-settings.sh
 	```bash
 	chmod +x update-prepare-settings.sh
 	
-	/update-prepare-settings.sh```
+	/update-prepare-settings.sh
+	```
 
 3. Run: 
 
 	```bash
-	   ansible-playbook -i inventory/ceph-cluster-inventory.yml updateCephCluster.yml --ask-vault-pass```
+	ansible-playbook -i inventory/ceph-cluster-inventory.yml updateCephCluster.yml --ask-vault-pass
+	```
 
 When there is a problem with update script, just run it again.
 
@@ -51,9 +53,9 @@ When there is a problem with update script, just run it again.
 
 This comand  will destroy whole cluster's nodes, also created by update
 
-	```bash
-	./clear-config.sh
-	```
+```bash
+./clear-config.sh
+```
 
 # Manual method to prepare ceph cluster creating settings:
 
@@ -85,44 +87,44 @@ Manual preparing settings to create cluster:
     
    vault pass can be created by
    ```bash
-	  ansible-vault encrypt_string <proxmox user password>
+   ansible-vault encrypt_string <proxmox user password>
    ```
 
      example:
 	
 	```bash
-	   cat group_vars/proxmox.yml
-	   ansible_user: root
-	   ansible_password: <vault value>
-	   ansible_port: 22
-       ansible_connection: ssh
+	cat group_vars/proxmox.yml
+	ansible_user: root
+	ansible_password: <vault value>
+	ansible_port: 22
+	ansible_connection: ssh
 	```
    
    group_vars/cephcluster.yml
      
      example:
      ```bash
-        cat group_vars/cephcluster.yml<br/>
-	    ansible_user: root<br/>
-	    ansible_port: 22</br>
-	    ansible_connection: ssh
-	 ```
+     cat group_vars/cephcluster.yml
+     ansible_user: root
+     ansible_port: 22
+     ansible_connection: ssh
+     ```
    
 5. Create host_vars for every ceph host in cluster and every node in proxmox cluster:
 
-	example:
+     example:
 	
     ```bash
-		cat host_vars/pve01.example.domain.net.yml
-		ansible_host: 192.168.0.200
-	```
+    cat host_vars/pve01.example.domain.net.yml
+    ansible_host: 192.168.0.200
+    ```
 
 6. Create inventory for all hosts
 
-	example:
+   example:
 	
     ```bash
-	cat inventory/ceph-cluster-inventory.yml
+    cat inventory/ceph-cluster-inventory.yml
     all:
       children:
         proxmox:
@@ -217,7 +219,7 @@ Manual preparing settings to create cluster:
   ```bash
   cat vars_files/ceph-vars.yml
    vars:
-     ansible_python_interpreter: '/usr/bin/python3
+     ansible_python_interpreter: '/usr/bin/python3'
    other_vars:
      - { chrony_server_set: 'server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst', ceph_url: <url_to_cephadm>, time_zone: Europe/Berlin, keyboard_layout: de, proxmox_user: root, ceph_user: root }
   ```
@@ -231,12 +233,12 @@ Manual method to prepare ceph cluster update settings:
 
 1. Create host_vars for new ceph host
 
-	example:
+    example:
 	
     ```bash
-	cat host_vars/mon-5.yml
-	ansible_host: 192.168.0.56
-	```
+    cat host_vars/mon-5.yml
+    ansible_host: 192.168.0.56
+    ```
 	
 2. Add node(s) in proper groups in inventory/ceph-cluster-inventory.yml
 
