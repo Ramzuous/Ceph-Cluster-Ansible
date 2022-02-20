@@ -12,12 +12,14 @@ Cluster create:
 
 1. Set variables in prepare-settings.sh - it generates: host_vars, inventory, group_vars, vars_files and set everything to use cluster
 
-2. Run: 
-	<code>chmod +x prepare-settings.sh
+2. Run:
+
+	<code>chmod +x prepare-settings.sh</code>
 	
-	./prepare-settings.sh</code>
+	<code>./prepare-settings.sh</code>
 
 3. Run: 
+
    <code>ansible-playbook -i inventory/ceph-cluster-inventory.yml createCephCluster.yml --ask-vault-pass</code>
 
 # Cluster update:
@@ -25,10 +27,13 @@ Cluster create:
 1. Set variables in update-prepare-settings.sh
 	
 2. Run:
-	<code>chmod +x update-prepare-settings.sh
-	./update-prepare-settings.sh</code>
+
+	<code>chmod +x update-prepare-settings.sh</code>
+	
+	<code>./update-prepare-settings.sh</code>
 
 3. Run: 
+
    <code>ansible-playbook -i inventory/ceph-cluster-inventory.yml updateCephCluster.yml --ask-vault-pass</code>
 
 When there is a problem with update script, just run it again.
