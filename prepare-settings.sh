@@ -25,6 +25,10 @@ echo ""
 proxmox_user="" # example: root
 proxmox_pass="" # Plain text
 
+# Proxmox API access
+proxmox_api_user="" # example: root@pam
+proxmox_api_pass="" # Plain text
+
 # Proxmox network
 proxmox_domain_name="" # example: mydomain.net
 proxmox_ip_three="" # Only three octets (example: 192.168.0)
@@ -41,6 +45,7 @@ template_osd_id=""
 # Hardware
 boot_order="" # example: order=scsi0;ide2;net0
 scsi_hw="" # example: virtio-scsi-pci
+virtio_disc="" # example
 net0_hw="" # example: virtio,bridge=vmbr0
 cores_num=""
 vcpus_num=""
@@ -55,8 +60,6 @@ gateway="" # example: 192.168.0.1
 nameserver="" # example: 8.8.8.8
 searchdomain="" # example: 1.1.1.1
 ceph_domain="" # example: mydomain.net
-time_zone="" # Time zone (exmaple: Europe/Berlin)
-keyboard_layout="" # Keyboard layout for VMs (example: de)
 
 # Ceph admin
 target_node_admin="" # example: pve01
@@ -78,17 +81,21 @@ osd_ip_fourth_smaller="" # exmaple 30
 ceph_osds_name_begin="" # example: osd
 ceph_osds_vm_id_begin="" # example: 20
 
+# Node on which user uses API
+operation_node_short="" # example: pve01
+operation_node=$operation_node_short"."$proxmox_domain_name
+
 # Cephadm URL
 ceph_url="https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm"
 
+# Time zone (exmaple: Europe/Berlin)
+time_zone=""
+
+# Keyboard layout for VMs (example: de)
+keyboard_layout=""
+
 # Chrony server setup (example: server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org )
 chrony_server_set="server 0.europe.pool.ntp.org iburst\nserver 1.europe.pool.ntp.org iburst\nserver 2.europe.pool.ntp.org iburst\nserver 3.europe.pool.ntp.org iburst"
-
-# Node on which user uses API
-operation_node_short="" # example: pve01
-
-# Not to set
-operation_node=$operation_node_short"."$proxmox_domain_name
 
 #################################################################################
 
@@ -223,10 +230,8 @@ echo "ansible_host: "$ceph_admin_ip >> host_vars/$ceph_admin_hostname.yml
 
 
 echo "ceph_admin_vars:" >> vars_files/ceph-admin-vars.yml
-echo "  - { vm_id: "$ceph_admin_vm_id", ceph_user: "$ceph_user", ceph_pass: '"$ceph_pass"', vm_name: '"$ceph_admin_hostname"', network_cloud: 'ip="$ceph_admin_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', scsi_hw: '"$scsi_hw"', net0_hw: '"$net0_hw"', target_node: '"$target_node_admin"', ip_cloud: '"$ceph_admin_ip"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", template_name: "$template_mon_name", template_id: "$template_mon_id", idrsapub: '"$idrsapub"' }" >> vars_files/ceph-admin-vars.yml
+echo "  - { vm_id: "$ceph_admin_vm_id", ceph_user: "$ceph_user", ceph_pass: '"$ceph_pass"', vm_name: '"$ceph_admin_hostname"', network_cloud: 'ip="$ceph_admin_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', scsi_hw: '"$scsi_hw"', net0_hw: '"$net0_hw"', target_node: '"$target_node_admin"', ip_cloud: '"$ceph_admin_ip"', operation_node_short: "$operation_node_short", api_user: "$proxmox_api_user", api_pass: "$proxmox_api_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", template_name: "$template_mon_name", template_id: "$template_mon_id", idrsapub: '"$idrsapub"' }" >> vars_files/ceph-admin-vars.yml
 
-echo ""
-echo ""
 
 echo "*****************************************************"
 echo "Set ceph mons"
@@ -253,21 +258,21 @@ do
         mon_ip=$ceph_network"."$mon_ip_fourth_smaller
 
         mon_name=$ceph_mons_name_begin"-"$i
-		
-		if ! test -f host_vars/$mon_name.yml;
-		then
 
-			echo "Setting host_vars/"$mon_name".yml, inventory/ceph-cluster-inventory.yml & vars_files/ceph-mon-vars.yml"
+	if ! test -f host_vars/$mon_name.yml;
+	then
 
-			echo "ansible_host: "$mon_ip >> host_vars/$mon_name".yml"
+		echo "Setting host_vars/"$mon_name".yml, inventory/ceph-cluster-inventory.yml & vars_files/ceph-mon-vars.yml"
 
-			echo "                "$mon_name":" >> inventory/ceph-cluster-inventory.yml
+		echo "ansible_host: "$mon_ip >> host_vars/$mon_name".yml"
 
-			echo "  - { vm_id: "$ceph_mons_vm_id_begin$i", ceph_user: "$ceph_user", ceph_pass: '"$ceph_pass"', vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', scsi_hw: '"$scsi_hw"', net0_hw: '"$net0_hw"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", template_name: "$template_mon_name", template_id: "$template_mon_id", idrsapub: '"$idrsapub"' }" >> vars_files/ceph-mon-vars.yml
-		
-		else
-			echo "File host_vars/"$mon_name".yml exists"
-		fi
+		echo "                "$mon_name":" >> inventory/ceph-cluster-inventory.yml
+
+		echo "  - { vm_id: "$ceph_mons_vm_id_begin$i", ceph_user: "$ceph_user", ceph_pass: '"$ceph_pass"', vm_name: '"$mon_name"', network_cloud: 'ip="$mon_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', scsi_hw: '"$scsi_hw"', net0_hw: '"$net0_hw"', target_node: '"$target_node_mon"', ip_cloud: '"$mon_ip"', operation_node_short: "$operation_node_short", api_user: "$proxmox_api_user", api_pass: "$proxmox_api_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", template_name: "$template_mon_name", template_id: "$template_mon_id", idrsapub: '"$idrsapub"' }" >> vars_files/ceph-mon-vars.yml
+
+	else
+		echo "File host_vars/"$mon_name".yml exists"
+	fi
 
         mon_ip_fourth_smaller=$((mon_ip_fourth_smaller+1))
         i=$((i+1))
@@ -302,26 +307,29 @@ do
         osd_ip=$ceph_network"."$osd_ip_fourth_smaller
 
         osd_name=$ceph_osds_name_begin"-"$i
-		
-		if ! test -f host_vars/$osd_name.yml;
-		then
 
-			echo "Setting host_vars/"$osd_name".yml, inventory/ceph-cluster-inventory.yml & vars_files/ceph-osd-vars.yml"
+	if ! test -f host_vars/$osd_name.yml;
+	then
 
-			echo "ansible_host: "$osd_ip >> host_vars/$osd_name".yml"
+		echo "Setting host_vars/"$osd_name".yml, inventory/ceph-cluster-inventory.yml & vars_files/ceph-osd-vars.yml"
 
-			echo "                "$osd_name":" >> inventory/ceph-cluster-inventory.yml
+		echo "ansible_host: "$osd_ip >> host_vars/$osd_name".yml"
 
-			echo "  - { vm_id: "$ceph_osds_vm_id_begin$i", ceph_user: "$ceph_user", ceph_pass: '"$ceph_pass"', vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', scsi_hw: '"$scsi_hw"', net0_hw: '"$net0_hw"', target_node: '"$target_node_osd"', ip_cloud: '"$osd_ip"', operation_node_short: "$operation_node_short", api_user: "$proxmox_user"@pam, api_pass: "$proxmox_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", template_name: "$template_osd_name", template_id: "$template_osd_id", idrsapub: '"$idrsapub"' }" >> vars_files/ceph-osd-vars.yml
-		
-		else
-			echo "File host_vars/"$osd_name".yml exists"
-		fi
+		echo "                "$osd_name":" >> inventory/ceph-cluster-inventory.yml
+
+		echo "  - { vm_id: "$ceph_osds_vm_id_begin$i", ceph_user: "$ceph_user", ceph_pass: '"$ceph_pass"', vm_name: '"$osd_name"', network_cloud: 'ip="$osd_ip"/"$netmask,"gw="$gateway"', nameserver_cloud: '"$nameserver"', searchdomain_cloud: '"$searchdomain"', scsi_hw: '"$scsi_hw"', net0_hw: '"$net0_hw"', target_node: '"$target_node_osd"', ip_cloud: '"$osd_ip"', operation_node_short: "$operation_node_short", api_user: "$proxmox_api_user", api_pass: "$proxmox_api_pass", memory_size: "$memory_size", cores_num: "$cores_num", vcpus_num: "$vcpus_num", ceph_domain: "$ceph_domain", template_name: "$template_osd_name", template_id: "$template_osd_id", idrsapub: '"$idrsapub"' }" >> vars_files/ceph-osd-vars.yml
+
+	else
+		echo "File host_vars/"$osd_name".yml exists"
+	fi
 
         osd_ip_fourth_smaller=$((osd_ip_fourth_smaller+1))
         i=$((i+1))
 
 done
+
+echo ""
+echo ""
 
 echo "*****************************************************"
 echo "Setting other values"
@@ -346,11 +354,15 @@ echo "Setting operation node"
 
 sed -i 's/operation_node_to_add/'$operation_node'/g' createCephCluster.yml
 
+sed -i 's/operation_node_to_add/'$operation_node'/g' updateCephCluster.yml
+
 sed -i 's/operation_node_to_add/'$operation_node'/' destroyVMS.yml
 
-sed -i 's/ceph_admin_ip_to_add/'$ceph_admin_ip'/' createCephCluster.yml
-
 sed -i 's/boot_order_to_add/'$boot_order'/' createCephCluster.yml
+
+sed -i 's/boot_order_to_add/'$boot_order'/' updateCephCluster.yml
+
+sed -i 's/ceph_admin_ip_to_add/'$ceph_admin_ip'/' createCephCluster.yml
 
 echo ""
 echo ""
@@ -445,7 +457,7 @@ echo "	sed -i 's/"$operation_node"/operation_node_to_add/g' createCephCluster.ym
 
 echo "" >> clear-config.sh
 
-echo "  sed -i 's/"$operation_node"/operation_node_to_add/g' destroyVMS.yml" >> clear-config.sh
+echo "	sed -i 's/"$operation_node"/operation_node_to_add/g' destroyVMS.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
@@ -454,6 +466,14 @@ echo "	sed -i 's/"$ceph_admin_ip"/ceph_admin_ip_to_add/' createCephCluster.yml" 
 echo "" >> clear-config.sh
 
 echo "	sed -i 's/"$boot_order"/boot_order_to_add/' createCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$operation_node"/operation_node_to_add/g' updateCephCluster.yml" >> clear-config.sh
+
+echo "" >> clear-config.sh
+
+echo "	sed -i 's/"$boot_order"/boot_order_to_add/' updateCephCluster.yml" >> clear-config.sh
 
 echo "" >> clear-config.sh
 
