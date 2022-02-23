@@ -131,12 +131,6 @@ Manual preparing settings to create cluster:
           hosts:
             pve01.example.domain.net:
             pve02.example.domain.net:
-			pve03.example.domain.net:
-			pve04.example.domain.net:
-			pve05.example.domain.net:
-			pve06.example.domain.net:
-            pve07.example.domain.net:
-            pve08.example.domain.net:
     	cephcluster:
       	  children:
             cephadmin:
